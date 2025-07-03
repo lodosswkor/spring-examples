@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Document</title>
+    <!-- browser-image-compression 라이브러리 추가 -->
+    <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
+</head>
+<body>
+
+    <h1>단순 업로드</h1>
+    <form method="POST" action="/fileupload" enctype="multipart/form-data">
+        <input type="file" name="file">
+        <button type="submit">Upload</button>
+    </form>
+    <br/>
+
+    <h1>원본 + 썸네일</h1>
+    <form method="POST" action="/fileupload/thumbnail" enctype="multipart/form-data">
+        <input type="file" name="file">
+        <button type="submit">Upload</button>
+    </form>
+
+    <h1>원본 + 썸네일 스크립트</h1>
+    <form id="clientThumbnailForm" enctype="multipart/form-data">
+        <input type="file" id="imageFile" accept="image/*" required>
+        <button type="submit">Upload</button>
+    </form>
+    
+    <div id="con" style="margin-top: 20px;">
+    </div>
+
+    <script type="text/javascript">
+
+        document.getElementById('clientThumbnailForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('imageFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('파일을 선택해주세요.');
+                return;
+            }
+            
+            try {
+                const originalFile = file;
+                
+                const thumbnailOptions = {
+                    maxSizeMB: 0.5,           // 최대 500KB
+                    maxWidthOrHeight: 300,    // 최대 300px
+                    useWebWorker: true,
+                    fileType: 'image/jpeg'
+                };
+                
+                const thumbnailFile = await imageCompression(file, thumbnailOptions);
+                
+                //-- 데이터 전송 준비 
+                const formData = new FormData();
+                formData.append('original', originalFile);
+                formData.append('thumbnail', thumbnailFile);
+                
+                // 서버로 전송
+                const response = await fetch('/fileupload/client/thumbnail', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    alert('업로드 성공!');
+                    document.getElementById("con").innerHTML = JSON.stringify(result);
+                    console.log('Upload result:', result);
+                } else {
+                    alert('업로드 실패: ' + response.statusText);
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById("con").innerHTML = error.message;
+                alert('오류가 발생했습니다.');
+            }
+        });
+        
+    </script>
+
+</body>
+</html>
